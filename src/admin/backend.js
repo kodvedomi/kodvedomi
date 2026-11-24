@@ -28,7 +28,7 @@ export async function signIn(email, password) {
   if (error) throw new Error(error.message === 'Invalid login credentials' ? 'Nesprávný e-mail nebo heslo.' : error.message);
 }
 export async function resetPassword(email) {
-  const { error } = await (await sb()).auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname + '#admin' });
+  const { error } = await (await sb()).auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
   if (error) throw error;
 }
 export async function updatePassword(password) {

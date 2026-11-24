@@ -42,6 +42,7 @@ function Login({ onIn }) {
   const [pw, setPw] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [recovery, setRecovery] = useState(RECOVERY);
   const [sent, setSent] = useState(false);
   const submit = async e => {
     e.preventDefault(); setBusy(true); setErr('');
@@ -169,6 +170,33 @@ function History({ secKey, onRestore, onClose }) {
           )}
         <p className="adm-help">Obnovená verze se načte do editoru. Na web se dostane až po kliknutí na Uložit.</p>
       </div>
+    </div>
+  );
+}
+
+function RecoveryStep({ onDone }) {
+  const [pw, setPw] = useState({ a: '', b: '' });
+  const [err, setErr] = useState('');
+  const strong = p => p.length >= 12 && /[a-zá-ž]/.test(p) && /[A-ZÁ-Ž]/.test(p) && /\d/.test(p);
+  return (
+    <div className="adm-login">
+      <form className="adm-card adm-login__card" onSubmit={async e => {
+        e.preventDefault();
+        if (pw.a !== pw.b) return setErr('Hesla se neshodují.');
+        if (!strong(pw.a)) return setErr('Heslo musí mít aspoň 12 znaků, velké i malé písmeno a číslici.');
+        try { await B.updatePassword(pw.a); onDone(); } catch (x) { setErr(x.message); }
+      }}>
+        <img src={m('logo-sm.webp')} alt="" />
+        <h1>Nové heslo</h1>
+        <p className="adm-help">Nastav si nové heslo do administrace.</p>
+        <label className="adm-label" htmlFor="r-a">Nové heslo</label>
+        <input id="r-a" type="password" autoComplete="new-password" value={pw.a} onChange={e => setPw({ ...pw, a: e.target.value })} required />
+        <label className="adm-label" htmlFor="r-b">Znovu pro kontrolu</label>
+        <input id="r-b" type="password" autoComplete="new-password" value={pw.b} onChange={e => setPw({ ...pw, b: e.target.value })} required />
+        <p className="adm-help">Aspoň 12 znaků, velké i malé písmeno a číslice.</p>
+        {err && <p className="adm-err">{err}</p>}
+        <button className="adm-btn adm-btn--main">Uložit heslo</button>
+      </form>
     </div>
   );
 }
@@ -367,7 +395,9 @@ function Ops({ kind, user }) {
 }
 
 /* ---------- aplikace ---------- */
-const readHashSection = () => location.hash.replace(/^#admin-?/, '') || 'blog';
+const readHashSection = () => (location.hash.startsWith('#admin') ? location.hash.replace(/^#admin-?/, '') : '') || 'blog';
+const RECOVERY = /type=recovery/.test(location.hash);
+const LINK_ERROR = /error_description=([^&]+)/.exec(location.hash);
 
 export default function AdminApp() {
   const [user, setUser] = useState(undefined);
@@ -389,7 +419,13 @@ export default function AdminApp() {
     ev.forEach(e => addEventListener(e, arm, { passive: true })); arm();
     return () => { clearTimeout(t); ev.forEach(e => removeEventListener(e, arm)); };
   }, [user]);
-  useEffect(() => { check(); document.title = 'Administrace · Kód Vědomí'; }, []);
+  useEffect(() => {
+    // počkat, až knihovna přečte přihlašovací údaje z odkazu v e-mailu, pak adresu uklidit
+    const t = setTimeout(() => { check().then(() => { if (/access_token|error_description/.test(location.hash)) history.replaceState(null, '', location.pathname + '#admin'); }); }, 0);
+    document.title = 'Administrace · Kód Vědomí';
+    if (LINK_ERROR) setMsg({ err: true, t: 'Odkaz z e-mailu už neplatí. Nech si poslat nový přes „Zapomenuté heslo“.' });
+    return () => clearTimeout(t);
+  }, []);
   useEffect(() => {
     if (!user || user.notAdmin) return;
     B.loadAll().then(d => { setSaved(d); setWork(structuredClone(d)); }).catch(x => setMsg({ err: true, t: 'Obsah se nepodařilo načíst: ' + x.message }));
@@ -419,6 +455,7 @@ export default function AdminApp() {
 
   if (user === undefined) return <div className="adm-loading">Načítám…</div>;
   if (!user) return <Login onIn={check} />;
+  if (recovery && !user.demo) return <RecoveryStep onDone={() => { setRecovery(false); check(); setMsg({ t: 'Heslo je změněné.' }); }} />;
   if (user.needCode) return <CodeStep onOk={check} onCancel={() => B.signOut().then(check)} />;
   if (user.notAdmin) return <div className="adm-login"><div className="adm-card adm-login__card"><h1>Bez oprávnění</h1><p>Účet {user.email} není mezi správci.</p><button className="adm-btn" onClick={() => B.signOut().then(check)}>Odhlásit</button></div></div>;
   if (!work) return <div className="adm-loading">{msg?.t || 'Načítám obsah…'}</div>;
