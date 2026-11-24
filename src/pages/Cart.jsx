@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { botGuard } from '../lib/safe.js';
 import { submit as saveRow } from '../lib/store.js';
+import { deliver } from '../lib/notify.js';
 import { brand, checkout } from '../content.js';
 import { PageTitle, Trap } from '../components/Ornaments.jsx';
 import { Line } from '../components/Icons.jsx';
@@ -23,9 +24,10 @@ export default function Cart() {
   const sub = items.reduce((a, x) => a + x.price * x.qty, 0);
   const total = sub + ship.price + (f.wrap ? checkout.giftWrap.price : 0);
 
-  const submit = e => {
+  const [busy, setBusy] = useState(false);
+  const submit = async e => {
     e.preventDefault();
-    if (!guard.ok(e.currentTarget)) { setSent(true); return; }
+    if (!guard.ok(e.currentTarget)) { setSent('ok'); return; }
     if (!items.length) return setErr('Košík je prázdný.');
     if (!f.name.trim() || !/^\S+@\S+\.\S+$/.test(f.email) || !f.phone.trim()) return setErr('Vyplň prosím jméno a příjmení, telefon a e-mail.');
     if ((physical || f.wrap) && (!f.street.trim() || !f.city.trim() || !f.zip.trim())) return setErr('Pro doručení poštou vyplň prosím adresu.');
@@ -34,9 +36,22 @@ export default function Cart() {
     const lines = items.map(x => `- ${x.name}${x.meta ? ' (' + x.meta + ')' : ''} × ${x.qty} = ${czk(x.price * x.qty)}`).join('\n');
     const body = `OBJEDNÁVKA Z WEBU KÓD VĚDOMÍ\n\n${lines}\n\nDoprava: ${ship.label} (${czk(ship.price)})${f.wrap ? `\nDárkové balení s poštou: ${czk(checkout.giftWrap.price)}` : ''}${f.voucher ? `\nJako dárkový certifikát (voucher)${f.giftFor ? ' pro: ' + f.giftFor : ''}` : ''}\nCELKEM: ${czk(total)}\n\nJméno a příjmení: ${f.name}\nTelefon: ${f.phone}\nE-mail: ${f.email}\nAdresa: ${[f.street, f.city, f.zip].filter(Boolean).join(', ') || '-'}\nFirma / IČO: ${[f.company, f.ico].filter(Boolean).join(', ') || '-'}\n\nSouhlas s obchodními podmínkami: ano\nSouhlas se zpracováním osobních údajů: ano\nOdběr novinek: ${f.news ? 'ano' : 'ne'}`;
     saveRow('orders', { name: f.name, email: f.email, phone: f.phone, items, shipping: ship.label, shipping_price: ship.price, gift_wrap: f.wrap, voucher: f.voucher, gift_for: f.giftFor, address: [f.street, f.city, f.zip].filter(Boolean).join(', '), company: f.company, ico: f.ico, newsletter: f.news, total, status: 'nová' });
-    window.location.href = `mailto:${brand.email}?subject=${encodeURIComponent('Objednávka – ' + f.name)}&body=${encodeURIComponent(body)}`;
-    setSent(true);
+    setBusy(true);
+    const res = await deliver(`Web: objednávka – ${f.name} – ${czk(total)}`, body, { name: f.name, email: f.email });
+    setBusy(false);
+    setSent(res);
+    if (res === 'ok') { cart.clear(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   };
+
+  if (sent === 'ok') return (
+    <section className="wrap">
+      <PageTitle title="Děkujeme" subtitle="Objednávka je odeslaná" lotus={false} />
+      <div className="card cart-empty" role="status">
+        <p>Sonia vám objednávku brzy potvrdí e-mailem a pošle pokyny k platbě.</p>
+        <a href="#eshop" className="pill-btn">Zpět do e-shopu <Line.arrow /></a>
+      </div>
+    </section>
+  );
 
   return (
     <section className="wrap">
@@ -90,8 +105,9 @@ export default function Cart() {
             <label className="check"><input id="c-gdpr" type="checkbox" checked={f.gdpr} onChange={set('gdpr')} /><span>Souhlasím se <a href="#gdpr">zpracováním osobních údajů (GDPR)</a> *</span></label>
             <label className="check"><input id="c-news" type="checkbox" checked={f.news} onChange={set('news')} /><span>Chci dostávat newsletter Kódu Vědomí</span></label>
             {err && <p className="lc__err" role="alert">{err}</p>}
-            <button className="pill-btn pill-btn--caps" type="submit">Odeslat objednávku</button>
-            {sent && <p className="booking__ok" role="status">Otevřeli jsme ti e-mail s objednávkou – stačí ho odeslat. Pokud se neotevřel, napiš na {brand.email}.</p>}
+            <button className="pill-btn pill-btn--caps" type="submit" disabled={busy}>{busy ? 'Odesílám…' : 'Odeslat objednávku'}</button>
+            {sent === 'ok' && <p className="booking__ok" role="status">Děkujeme, objednávku jsme odeslali. Sonia vám objednávku brzy potvrdí e-mailem.</p>}
+          {sent === 'mail' && <p className="booking__ok" role="status">Otevřeli jsme ti e-mail se zprávou – stačí ho odeslat. Pokud se neotevřel, napiš na {brand.email}.</p>}
           </form>
 
           <aside className="card checkout__sum">

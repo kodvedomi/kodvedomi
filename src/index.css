@@ -830,3 +830,14 @@ button { font: inherit; }
 .legal__firm{margin-top:1rem;font-size:.88rem;color:var(--muted)}
 
 .hp-trap{position:absolute!important;left:-10000px!important;width:1px;height:1px;opacity:0}
+
+/* Poptávkový formulář v e-shopu */
+.inq { max-width: 560px; }
+.inq h2 { font-size: 1.3rem; margin-bottom: .8rem; padding-right: 2rem; }
+.inq__form { display: grid; gap: .8rem; text-align: left; }
+.inq__form label { display: grid; gap: .25rem; font-weight: 700; }
+.inq__form input:not([type=checkbox]), .inq__form textarea { font: inherit; font-weight: 400; padding: .6rem .9rem; border-radius: 12px; border: 1px solid rgba(214, 170, 95, .6); background: #fff; color: var(--ink); resize: vertical; width: 100%; }
+.inq__form .check { display: flex; gap: .5rem; align-items: flex-start; font-weight: 400; font-size: .9rem; }
+.inq__form .pill-btn { justify-self: start; }
+.pill-btn[disabled] { opacity: .6; cursor: wait; }
+@media (max-width: 560px) { .inq .row2 { grid-template-columns: 1fr; } }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { botGuard } from '../lib/safe.js';
 import { submit as saveRow } from '../lib/store.js';
+import { deliver } from '../lib/notify.js';
 import gsap from 'gsap';
 import { sonia, brand, m, img } from '../content.js';
 import { Html, Trap } from '../components/Ornaments.jsx';
@@ -82,12 +83,14 @@ function Booking() {
   const guard = useMemo(botGuard, []);
   const set = k => e => setF({ ...f, [k]: e.target.value });
   const body = `Jméno: ${f.name}\nE-mail: ${f.email}\nTelefon: ${f.phone || '-'}\nSlužba: ${f.service}\nTermín: ${f.date || 'zatím neznám'}\nMísto: ${f.place || '-'}\n\n${f.msg}`;
-  const submit = e => {
+  const [busy, setBusy] = useState(false);
+  const submit = async e => {
     e.preventDefault();
-    if (!guard.ok(e.currentTarget)) { setSent(true); return; }
+    if (!guard.ok(e.currentTarget)) { setSent('ok'); return; }
     saveRow('messages', { kind: 'poptavka', topic: f.service, name: f.name, email: f.email, phone: f.phone, data: { date: f.date, place: f.place }, message: f.msg });
-    window.location.href = `mailto:${brand.email}?subject=${encodeURIComponent('Nezávazná poptávka – ' + f.service)}&body=${encodeURIComponent(body)}`;
-    setSent(true);
+    setBusy(true);
+    setSent(await deliver(`Web: nezávazná poptávka – ${f.service} – ${f.name}`, body, { name: f.name, email: f.email }));
+    setBusy(false);
   };
   return (
     <section id="poptavka" className="booking">
@@ -114,8 +117,9 @@ function Booking() {
           </div>
           <label><span>Tvoje představa o akci</span><textarea id="b-msg" rows="4" value={f.msg} onChange={set('msg')} placeholder="Typ akce, délka vystoupení, počet hostů, aparatura…" /></label>
           <p className="booking__hint">Přesný termín ani všechny podrobnosti zatím znát nemusíš.</p>
-          <button className="pill-btn pill-btn--caps" type="submit">Odeslat nezávaznou poptávku</button>
-          {sent && <p className="booking__ok" role="status">Otevřeli jsme ti e-mail s vyplněnou poptávkou – stačí ho odeslat. Pokud se neotevřel, napiš na {brand.email}.</p>}
+          <button className="pill-btn pill-btn--caps" type="submit" disabled={busy}>{busy ? 'Odesílám…' : 'Odeslat nezávaznou poptávku'}</button>
+          {sent === 'ok' && <p className="booking__ok" role="status">Děkujeme, poptávku jsme odeslali. Sonia se vám brzy ozve na zadaný e-mail.</p>}
+          {sent === 'mail' && <p className="booking__ok" role="status">Otevřeli jsme ti e-mail se zprávou – stačí ho odeslat. Pokud se neotevřel, napiš na {brand.email}.</p>}
         </form>
       </div>
     </section>

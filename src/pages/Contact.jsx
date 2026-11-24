@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { botGuard } from '../lib/safe.js';
 import { submit as saveRow } from '../lib/store.js';
+import { deliver } from '../lib/notify.js';
 import { brand } from '../content.js';
 import { PageTitle, Trap } from '../components/Ornaments.jsx';
 import { Line } from '../components/Icons.jsx';
@@ -14,7 +15,8 @@ export default function Contact() {
   const [err, setErr] = useState('');
   const [sent, setSent] = useState(false);
   const set = k => e => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
-  const submit = e => {
+  const [busy, setBusy] = useState(false);
+  const submit = async e => {
     e.preventDefault();
     if (!guard.ok(e.currentTarget)) { setSent(true); return; }
     if (!f.first.trim() || !f.last.trim()) return setErr('Vyplň prosím jméno a příjmení.');
@@ -24,8 +26,9 @@ export default function Contact() {
     setErr('');
     const body = `${f.msg}\n\n—\n${f.first} ${f.last}\n${f.email}${f.phone ? '\n' + f.phone : ''}`;
     saveRow('messages', { kind: 'kontakt', topic: f.topic, name: `${f.first} ${f.last}`.trim(), email: f.email, phone: f.phone, message: f.msg });
-    window.location.href = `mailto:${brand.email}?subject=${encodeURIComponent(`${f.topic} – ${f.first} ${f.last}`)}&body=${encodeURIComponent(body)}`;
-    setSent(true);
+    setBusy(true);
+    setSent(await deliver(`Web: ${f.topic} – ${f.first} ${f.last}`, `Téma: ${f.topic}\n\n${body}`, { name: `${f.first} ${f.last}`, email: f.email }));
+    setBusy(false);
   };
   return (
     <section className="wrap">
@@ -50,8 +53,9 @@ export default function Contact() {
           <label><span>Zpráva *</span><textarea id="k-text" rows="6" value={f.msg} onChange={set('msg')} placeholder="S čím ti můžu pomoci?" /></label>
           <label className="check"><input id="k-gdpr" type="checkbox" checked={f.gdpr} onChange={set('gdpr')} /><span>Souhlasím se zpracováním osobních údajů pro vyřízení mé zprávy *</span></label>
           {err && <p className="lc__err" role="alert">{err}</p>}
-          <button className="pill-btn pill-btn--caps" type="submit">Odeslat zprávu</button>
-          {sent && <p className="booking__ok" role="status">Otevřeli jsme ti e-mail s tvou zprávou – stačí ho odeslat. Pokud se neotevřel, napiš na {brand.email}.</p>}
+          <button className="pill-btn pill-btn--caps" type="submit" disabled={busy}>{busy ? 'Odesílám…' : 'Odeslat zprávu'}</button>
+          {sent === 'ok' && <p className="booking__ok" role="status">Děkuji, tvoje zpráva je odeslaná. Sonia se ti brzy ozve na zadaný e-mail.</p>}
+          {sent === 'mail' && <p className="booking__ok" role="status">Otevřeli jsme ti e-mail se zprávou – stačí ho odeslat. Pokud se neotevřel, napiš na {brand.email}.</p>}
         </form>
         <div className="contact__side">
           <div className="card reveal">

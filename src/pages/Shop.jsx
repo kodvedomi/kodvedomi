@@ -3,9 +3,9 @@ import { PageTitle, LotusRule } from '../components/Ornaments.jsx';
 import { Line } from '../components/Icons.jsx';
 import { cart } from '../lib/cart.js';
 import { useState } from 'react';
+import Inquiry from '../components/Inquiry.jsx';
 
 const czk = n => new Intl.NumberFormat('cs-CZ').format(n) + ' Kč';
-const mail = (subject, body = '') => `mailto:${brand.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
 function AddBtn({ it }) {
   const [done, setDone] = useState(false);
@@ -16,8 +16,7 @@ function AddBtn({ it }) {
   );
 }
 
-function Offer({ it, cat }) {
-  const subj = `Objednávka: ${it.name}${it.meta ? ' (' + it.meta + ')' : ''}`;
+function Offer({ it, cat, onAsk }) {
   return (
     <article className={`card offer${it.best ? ' offer--best' : ''}`}>
       {it.best && <span className="offer__flag">Nejvýhodnější</span>}
@@ -28,9 +27,9 @@ function Offer({ it, cat }) {
       {it.note && <p className="offer__note">{it.note}</p>}
       {it.perks && <ul className="offer__perks">{it.perks.map(p => <li key={p}>{p}</li>)}</ul>}
       {it.soon || !it.price ? (
-        <a className="pill-btn" href={mail(it.soon ? `Zájem: ${it.name}` : subj, it.soon ? 'Mám zájem dozvědět se o tom jako první.' : `Dobrý den, mám zájem o: ${it.name} – ${it.meta}.`)}>
+        <button type="button" className="pill-btn" onClick={() => onAsk({ subject: it.soon ? `Zájem: ${it.name}` : `Poptávka: ${it.name}`, text: it.soon ? 'Mám zájem dozvědět se o tom jako první.' : `Dobrý den, mám zájem o: ${it.name}${it.meta ? ' – ' + it.meta : ''}.` })}>
           {it.soon ? 'Chci vědět první' : 'Poptat'} <Line.arrow />
-        </a>
+        </button>
       ) : (
         <AddBtn it={it} />
       )}
@@ -63,6 +62,7 @@ function Prod({ p }) {
 function Detail({ id }) {
   const d = shop.detail[id];
   const cat = shop.categories.find(c => c.id === id);
+  const [ask, setAsk] = useState(null);
   return (
     <section className="wrap shopdetail">
       <a href="#eshop" className="back"><Line.chevL /> Zpět do e-shopu</a>
@@ -72,7 +72,7 @@ function Detail({ id }) {
           <h1 className="gold-caps">{d.title}</h1>
           <LotusRule />
           <p>{d.intro}</p>
-          {d.free && <a className="pill-btn pill-btn--caps" href={mail('Úvodní setkání zdarma (40 minut)', 'Dobrý den, ráda bych si domluvila úvodní setkání zdarma.')}>{d.free}</a>}
+          {d.free && <button type="button" className="pill-btn pill-btn--caps" onClick={() => setAsk({ subject: 'Úvodní setkání zdarma (40 minut)', text: 'Dobrý den, ráda bych si domluvila úvodní setkání zdarma.' })}>{d.free}</button>}
         </div>
       </div>
       {d.subs && (
@@ -91,7 +91,7 @@ function Detail({ id }) {
         <div key={i} id={g.id ? 'sk-' + g.id : undefined} className="offers-group">
           {g.title && <div className="stitle"><span /><h2 className="gold-caps">{g.title}</h2><span /></div>}
           {g.lead && <p className="offers-group__lead">{g.lead}</p>}
-          <div className={`offers offers--${g.items.length}`}>{g.items.map((it, j) => <Offer key={j} it={it} cat={id} />)}</div>
+          <div className={`offers offers--${g.items.length}`}>{g.items.map((it, j) => <Offer key={j} it={it} cat={id} onAsk={setAsk} />)}</div>
         </div>
       ))}
       {d.products && (
@@ -99,7 +99,8 @@ function Detail({ id }) {
           {d.products.map(p => <Prod key={p.name} p={p} />)}
         </div>
       )}
-      {!d.groups.length && !(d.products || []).some(p => p.price) && <p className="center soonbtn"><a className="pill-btn" href={mail(`Zájem: ${d.title}`, 'Dejte mi prosím vědět, až bude nabídka k dispozici.')}>Chci vědět první <Line.arrow /></a></p>}
+      {!d.groups.length && !(d.products || []).some(p => p.price) && <p className="center soonbtn"><button type="button" className="pill-btn" onClick={() => setAsk({ subject: `Zájem: ${d.title}`, text: 'Dejte mi prosím vědět, až bude nabídka k dispozici.' })}>Chci vědět první <Line.arrow /></button></p>}
+      {ask && <Inquiry ask={ask} onClose={() => setAsk(null)} />}
       <p className="shopnote">Platbu kartou, Apple Pay a Google Pay s automatickou fakturou připravujeme. Zatím ti objednávku potvrdíme e-mailem.</p>
     </section>
   );
