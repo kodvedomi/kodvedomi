@@ -42,7 +42,6 @@ function Login({ onIn }) {
   const [pw, setPw] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const [recovery, setRecovery] = useState(RECOVERY);
   const [sent, setSent] = useState(false);
   const submit = async e => {
     e.preventDefault(); setBusy(true); setErr('');
@@ -406,6 +405,7 @@ export default function AdminApp() {
   const [sec, setSec] = useState(readHashSection);
   const [msg, setMsg] = useState(null);
   const [menu, setMenu] = useState(false);
+  const [recovery, setRecovery] = useState(RECOVERY);
   const [busy, setBusy] = useState(false);
 
   const check = () => B.getUser().then(setUser).catch(() => setUser(null));
