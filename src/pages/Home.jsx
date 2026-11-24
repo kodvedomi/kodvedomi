@@ -16,7 +16,7 @@ export default function Home() {
         <div className="hero-frame__inner">
           <img src={m('hero-mandala.webp')} alt="Mandala Kódu Vědomí s meditující postavou v kosmickém světle" className="hero-frame__bg" fetchpriority="high" />
           <div className="hero-frame__gl" aria-hidden="true">
-            <Galaxy starColors={['#ffffff', '#f3e8ff', '#ffe6c2']} density={0.6} glowIntensity={0.4} twinkleIntensity={0.9}
+            <Galaxy dpr={1.5} starColors={['#ffffff', '#f3e8ff', '#ffe6c2']} density={0.6} glowIntensity={0.4} twinkleIntensity={0.9}
               rotationSpeed={0.01} starSpeed={0.12} speed={0.3} repulsionStrength={1.2} clickWarp={false} flareIntensity={0.15} starSize={0.7} transparent />
           </div>
           <div className="hero-frame__pulse" aria-hidden="true" />

@@ -4,6 +4,9 @@ import { m } from '../content.js';
 
 /** Živé pozadí celého webu: Soniin mramor (pomalu dýchá a pluje),
  *  světelné vlny na okrajích a stoupající zlaté jiskry. */
+// Na mobilech a slabších zařízeních méně jisker, ať web běží plynule.
+const LIGHT = typeof window !== 'undefined' && (window.innerWidth < 760 || (navigator.hardwareConcurrency || 8) <= 4);
+
 export default function LiveBackground({ calm = false }) {
   return (
     <div className="bg" aria-hidden="true">
@@ -19,7 +22,7 @@ export default function LiveBackground({ calm = false }) {
       </div>
       {!calm && (
         <div className="bg__sparks">
-          <Particles particleCount={120} particleSpread={12} speed={0.05} particleColors={['#ffffff', '#fff1cf', '#e9d9ff', '#ffd9f1']}
+          <Particles pixelRatio={1.25} particleCount={LIGHT ? 50 : 120} particleSpread={12} speed={0.05} particleColors={['#ffffff', '#fff1cf', '#e9d9ff', '#ffd9f1']}
             particleBaseSize={70} sizeRandomness={1.2} shape="sparkle" glow={0.8} twinkle={0.7} drift="up" driftSpeed={0.35}
             moveParticlesOnHover hoverEffect="parallax" particleHoverFactor={0.6} clickBurst={false} alphaParticles disableRotation={false} />
         </div>
